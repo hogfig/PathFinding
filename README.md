@@ -1,3 +1,3 @@
 # PathFinding
 
-![Alt Text](https://github.com/hogfig/PathFinding/PathFinding.gif)
+![Alt Text](https://github.com/hogfig/PathFinding/blob/main/PathFinding.gif)
