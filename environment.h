@@ -91,7 +91,12 @@ class Environment{
 
         void Refresh(int refresh_rate=500){
             this_thread::sleep_for(chrono::milliseconds(refresh_rate));
-            system("clear");
+            //check if windows machine?
+            #ifdef _WIN32
+                system("CLS");
+            #else
+                system("clear");
+            #endif
             this->Show();
         }
 
