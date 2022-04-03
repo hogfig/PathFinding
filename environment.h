@@ -32,6 +32,8 @@ class Environment{
                         field[i].push_back(el);
                     }else{
                         Element el = Element(j,GRID_SIZE-i-1,6);
+                        el.set_GlobalGoal(INFINITY);
+                        el.set_LocalGoal(INFINITY);
                         field[i].push_back(el);    
                     }
                 }
@@ -97,8 +99,8 @@ class Environment{
         int get_UsrGridSize(){ return USER_GRID_SIZE;}
         int get_MinGridsize(){return min_gridsize;}
         int get_MaxGridsize(){return max_gridsize;}
-        Element get_element(int x, int y){return field[GRID_SIZE-y-1][x];}
-        Element* get_element_adress(int x, int y){ return &(*field_prt)[GRID_SIZE-y-1][x];}
+        //Element get_element(int x, int y){return field[GRID_SIZE-y-1][x];}
+        Element* get_element(int x, int y){ return &(*field_prt)[GRID_SIZE-y-1][x];}
         //SET
         void set_MinGridsize(uint8_t size){ min_gridsize=size;}
         void set_ObstacleThresh(float n){ obstacle_thresh=n;}

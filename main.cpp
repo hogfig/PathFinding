@@ -1,10 +1,12 @@
 #include<iostream>
+#include <algorithm>
 #include<thread>
 #include<chrono>
 #include<cmath>
 #include <vector>
 #include "environment.h"
 #include "user_input.h"
+
 
 using namespace std;
 
@@ -13,66 +15,66 @@ float Calculate_globalG(Element e1,Element e2){
     return (float)(sqrt( pow(abs(e1.get_x()-e2.get_x()),2) + pow(abs(e1.get_y()-e2.get_y()),2)));
 }
 
-int Calculate_localG(Element e1,Element e2){
-    return abs(e1.get_x()-e2.get_x())+abs(e1.get_y()-e2.get_y());
-}
 
 void Display_ShortestPath(Element*el, Environment*map){
     while(el->get_parent()->get_parent()->get_id() != -1){
-        Element *next = el->get_parent(); 
-        next->set_ElChar("\x1B[31m*\033[0m");
-        map->AddElement(*next);
-        el = next;
+        el->get_parent()->set_ElChar("\x1B[31m*\033[0m");
+        el = el->get_parent();
         map->Refresh();
     }
 }
 
 void A_star(Element h, Element t, Environment*map){
-    int neighbors_coordinates[8][2] = {{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1}};
+    int neighbors_coordinates[8][2] = {{0,1},{1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1}}; // 8 degrees of freedom
+    //int neighbors_coordinates[4][2] = {{0,1},{1,0},{0,-1},{-1,0}}; // 4 degrees of freedom
+    int rows = sizeof(neighbors_coordinates)/sizeof(neighbors_coordinates[0]);
     int x_cord,y_cord;
-    vector<Element> Neighbors;
+    vector<Element> Open;
 
     h.set_GlobalGoal(Calculate_globalG(h,t));
-    h.set_LocalGoal(Calculate_localG(h,t));
+    h.set_LocalGoal(0);
     Element closest_el = h;
     closest_el.set_isVisited(true);
     map->AddElement(closest_el);
 
-    Neighbors.push_back(closest_el);
+    Open.push_back(closest_el);
 
-    while(closest_el.get_LocalGoal()!=0){
-        for(int i=0; i<8; i++){
-            x_cord = closest_el.get_x() + neighbors_coordinates[i][0];
-            y_cord = closest_el.get_y() + neighbors_coordinates[i][1];
-            Element n_el = map->get_element(x_cord,y_cord);
+    while(!Open.empty()){
+       
+        sort(Open.begin(),Open.end());
+        closest_el = Open[0]; //not good?
 
-            if(!n_el.get_ocupied() && !n_el.get_isVisited()){
-                Element n = Element(x_cord,y_cord,3);
-                n.set_GlobalGoal(Calculate_globalG(n,t));
-                n.set_LocalGoal(Calculate_localG(n,t));
-                n.set_parent(map->get_element_adress(closest_el.get_x(),closest_el.get_y()));
-                
-                if(n.get_LocalGoal() <= 0) {
-                    n.set_id(1);
-                }
-
-                Neighbors.push_back(n);
-                map->AddElement(n);
-            
-            }
+        if(closest_el.get_GlobalGoal() == 0){
+            Display_ShortestPath(&closest_el, map);
+            break;
         }
 
-        if(Neighbors.size()>=1){
-            closest_el.set_isVisited(true);
-            map->AddElement(closest_el); // to update isVisitate state
-            Neighbors.erase(Neighbors.begin());
-            sort(Neighbors.begin(),Neighbors.end());
-            closest_el = Neighbors[0]; //not good
+        Open.erase(Open.begin());
+        
+        for(int i=0; i<rows; i++){ //for each neighbor
+            x_cord = closest_el.get_x() + neighbors_coordinates[i][0];
+            y_cord = closest_el.get_y() + neighbors_coordinates[i][1];
+            Element* n_el = map->get_element(x_cord,y_cord);
+            float distance = Calculate_globalG(closest_el,*n_el); // distance from closest element to neighbor
+            
+            // if localG_current< distace to n_el + localG_n_el => update n_el
+            if(closest_el.get_LocalGoal() < ( distance + n_el->get_LocalGoal()) && !n_el->get_ocupied() && !n_el->get_isVisited()){ 
+                n_el->set_GlobalGoal(Calculate_globalG(*n_el,t));
+                n_el->set_LocalGoal(distance + closest_el.get_LocalGoal());
+                n_el->set_parent(map->get_element(closest_el.get_x(),closest_el.get_y()));
+                if(n_el->get_GlobalGoal()==0) n_el->set_id(1); else n_el->set_id(3);
+
+                //if n_el is not in Open put in Open
+                if (!n_el->get_isVisited()){
+                    Open.push_back(*n_el);
+                    n_el->set_isVisited(true);
+                }
+            }
         }
         map->Refresh();
     }
 
-    Display_ShortestPath(&closest_el, map);
+    if(Open.size() == 0) cout<<"\nCouldn't find a path to the target\n";
 }
 
 bool CheckInput_GRIDSIZE(string s, Environment env){
@@ -138,7 +140,8 @@ int main(){
 
     // //if you want different chars for hunter,target,... set them here
     Element root = Element(-1,-1,-1);
-    Element target = Element(target_pos[0],target_pos[1],1);
+    Element target = Element(target_pos[0],target_pos[1],1); 
+    target.set_LocalGoal(INFINITY); target.set_GlobalGoal(INFINITY);//needed for the A* algorithm to work properly
     Element hunter = Element(hunter_pos[0],hunter_pos[1],2);
     hunter.set_parent(&root);
     
